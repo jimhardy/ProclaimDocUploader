@@ -11,6 +11,8 @@ const toastColor = {
   text: '#fff'
 };
 
+// const imageRegex = /\.(jpe?g|png|gif|bmp|tiff)$/i;
+
 export default class App extends Component {
   state = {
     loading: true,
