@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 // import Notifications, { notify } from 'react-notify-toast';
 import Spinner from './Spinner';
+import Login from './login';
 import Images from './Images';
 import Buttons from './Buttons';
 import { API_URL } from './config';
@@ -11,8 +12,11 @@ import 'react-toastify/dist/ReactToastify.css';
 export default class App extends Component {
   state = {
     loading: true,
-    uploading: false,
-    images: []
+    images: [],
+    login: {
+      caseRef: '',
+      password: ''
+    }
   };
 
   componentDidMount() {
@@ -59,7 +63,7 @@ export default class App extends Component {
     });
 
     try {
-      this.setState({ uploading: true });
+      this.setState({ loading: true });
 
       fetch(`${API_URL}/image-upload`, {
         method: 'POST',
@@ -77,15 +81,15 @@ export default class App extends Component {
         })
         .then(images => {
           this.setState({
-            uploading: false,
+            loading: false,
             images
           });
         })
         .catch(err => {
-          this.setState({ uploading: false });
+          this.setState({ loading: false });
         });
     } catch (e) {
-      this.setState({ uploading: false });
+      this.setState({ loading: false });
     }
   };
 
@@ -94,6 +98,11 @@ export default class App extends Component {
   };
 
   removeImage = id => {
+    console.log(id);
+    fetch(`${API_URL}/delete-image`, {
+      method: 'POST',
+      body: id
+    });
     this.setState({ images: this.filter(id) });
   };
 
@@ -101,12 +110,18 @@ export default class App extends Component {
     this.setState({ images: this.filter(id) });
   };
 
+  onLogin = evt => {
+    this.setState({ login: evt });
+  };
+
   render() {
-    const { loading, uploading, images } = this.state;
+    const { loading, images, login } = this.state;
 
     const content = () => {
       switch (true) {
-        case loading || uploading:
+        case !login.caseRef && !login.password:
+          return <Login handleSubmit={this.onLogin} />;
+        case loading:
           return <Spinner />;
         case images.length > 0:
           return (
@@ -116,7 +131,7 @@ export default class App extends Component {
                 removeImage={this.removeImage}
                 onError={this.onError}
               />
-              <button className="Button-push">Upload to Proclaim</button>
+              <button className="Form-button">Upload to Proclaim</button>
             </div>
           );
         default:

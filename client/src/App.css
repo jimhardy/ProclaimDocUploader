@@ -5,6 +5,14 @@ body {
   margin: 0px;
 }
 
+h1 {
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  letter-spacing: 5px;
+}
+
 .container {
   display: flex;
   flex-direction: column;
@@ -23,10 +31,43 @@ body {
 .button {
   margin: 0 10vw;
 }
+.Form-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.Form-input {
+  font-weight: 100;
+  width: 20vw;
+  height: 50px;
+  font-size: 30px;
+  line-height: 50px;
+  padding-left: 10px;
+}
+
+.Form-button {
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  width: 100%;
+  height: 50px;
+  color: #e6e5ec;
+  letter-spacing: 3px;
+  background-color: #a29ccc;
+  /* border: 2px solid #555555; */
+  margin-top: 10px;
+}
 
 .images {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
+  flex: 1;
 }
 
 .delete {
@@ -35,7 +76,6 @@ body {
   right: 15px;
 }
 
-footer svg,
 .button svg,
 .delete svg {
   filter: drop-shadow(3px 3px 3px #999);
@@ -43,7 +83,6 @@ footer svg,
   transform: rotate(-0.2deg);
 }
 
-footer svg:hover,
 .button svg:hover,
 .delete svg:hover {
   filter: drop-shadow(4px 4px 4px #999);
@@ -53,15 +92,6 @@ footer svg:hover,
 
 .delete svg {
   filter: drop-shadow(1px 1px 1px #999);
-}
-
-footer svg {
-  filter: drop-shadow(1.5px 1px 1px #999);
-}
-
-footer svg:hover,
-.delete svg:hover {
-  filter: drop-shadow(1.5px 1.5px 1.5px);
 }
 
 input[type='file'] {
@@ -139,8 +169,7 @@ img {
 }
 
 .spinner {
-  animation: spin 3s ease-in-out;
-  top: 60%;
+  animation: spin 6s infinite;
 }
 
 .spinner svg {
@@ -151,21 +180,38 @@ img {
   0% {
     -webkit-transform: scale(0.1);
   }
-  100% {
+  50% {
     -webkit-transform: scale(2);
+    opacity: 1;
+    -webkit-transform-origin-y: -20px;
+  }
+  80% {
+    -webkit-transform: scale(2);
+    -webkit-transform-origin-y: -20px;
+    opacity: 1;
+  }
+  95% {
+    -webkit-transform: scale(2);
+    -webkit-transform-origin-y: -20px;
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: scale(5);
+    -webkit-transform-origin-y: -20px;
+    opacity: 0;
   }
 }
 
 .rolling {
   position: absolute;
   transform: scale(2);
-  animation: move 7s ease-out;
-  filter: drop-shadow(4px 4px 4px #999);
+  animation: move 6s infinite;
+  /* filter: drop-shadow(4px 4px 4px #999); */
 }
 
 @keyframes move {
   0% {
-    left: -10%;
+    left: -50%;
   }
   100% {
     left: 150%;
