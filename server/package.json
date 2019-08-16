@@ -10,11 +10,15 @@
   "author": "jesse heaslip",
   "license": "MIT",
   "dependencies": {
+    "aws-sdk": "^2.509.0",
+    "body-parser": "^1.19.0",
     "cloudinary": "^1.11.0",
     "cors": "^2.8.4",
     "dotenv": "^6.0.0",
     "express": "^4.16.3",
-    "express-form-data": "^2.0.6"
+    "express-form-data": "^2.0.6",
+    "multer": "^1.4.2",
+    "multer-s3": "^2.9.0"
   },
   "devDependencies": {
     "nodemon": "^1.18.4"

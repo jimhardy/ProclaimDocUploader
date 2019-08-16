@@ -1,17 +1,12 @@
 import React, { Component } from 'react';
-import Notifications, { notify } from 'react-notify-toast';
+// import Notifications, { notify } from 'react-notify-toast';
 import Spinner from './Spinner';
 import Images from './Images';
 import Buttons from './Buttons';
 import { API_URL } from './config';
 import './App.css';
-
-const toastColor = {
-  background: '#505050',
-  text: '#fff'
-};
-
-// const imageRegex = /\.(jpe?g|png|gif|bmp|tiff)$/i;
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default class App extends Component {
   state = {
@@ -25,65 +20,73 @@ export default class App extends Component {
       if (res.ok) {
         return this.setState({ loading: false });
       }
-      const msg = 'Something is went wrong';
-      this.toast(msg, 'custom', 2000, toastColor);
+      toast('No response from server');
     });
   }
 
-  toast = notify.createShowQueue();
-
   onChange = e => {
-    const errs = [];
     const files = Array.from(e.target.files);
 
     if (files.length > 10) {
-      const msg = 'Only 10 images can be uploaded at a time';
-      return this.toast(msg, 'custom', 2000, toastColor);
+      toast.error('Only 10 images can be uploaded at a time', {
+        position: toast.POSITION.TOP_CENTER
+      });
     }
 
     const formData = new FormData();
     const types = ['image/png', 'image/jpeg', 'image/gif'];
 
     files.forEach((file, i) => {
+      let err = [];
       if (types.every(type => file.type !== type)) {
-        errs.push(`'${file.type}' is not a supported format`);
+        let msg = 'Not a supported format';
+        err.push(msg);
+        toast.error(msg, {
+          position: toast.POSITION.TOP_CENTER
+        });
       }
 
-      // if (file.size > 150000) {
-      //   errs.push(`'${file.name}' is too large, please pick a smaller file`);
-      // }
-
-      formData.append(i, file);
+      if (file.size > 2000000) {
+        let msg = 'Image is too large, please select a smaller file';
+        err.push(msg);
+        toast.error(msg, {
+          position: toast.POSITION.TOP_CENTER
+        });
+      }
+      if (!err.length) {
+        formData.append(i, file);
+      }
     });
 
-    if (errs.length) {
-      return errs.forEach(err => this.toast(err, 'custom', 2000, toastColor));
-    }
+    try {
+      this.setState({ uploading: true });
 
-    this.setState({ uploading: true });
-
-    fetch(`${API_URL}/image-upload`, {
-      method: 'POST',
-      body: formData
-    })
-      .then(res => {
-        if (!res.ok) {
-          throw res;
-        }
-        return res.json();
+      fetch(`${API_URL}/image-upload`, {
+        method: 'POST',
+        body: formData
       })
-      .then(images => {
-        this.setState({
-          uploading: false,
-          images
-        });
-      })
-      .catch(err => {
-        err.json().then(e => {
-          this.toast(e.message, 'custom', 2000, toastColor);
+        .then(res => {
+          if (!res.ok) {
+            toast.info(
+              'Please check the images are correct and click Push to Case',
+              { position: toast.POSITION.TOP_CENTER }
+            );
+            throw res;
+          }
+          return res.json();
+        })
+        .then(images => {
+          this.setState({
+            uploading: false,
+            images
+          });
+        })
+        .catch(err => {
           this.setState({ uploading: false });
         });
-      });
+    } catch (e) {
+      this.setState({ uploading: false });
+    }
   };
 
   filter = id => {
@@ -95,7 +98,6 @@ export default class App extends Component {
   };
 
   onError = id => {
-    this.toast('Oops, something went wrong', 'custom', 2000, toastColor);
     this.setState({ images: this.filter(id) });
   };
 
@@ -108,11 +110,14 @@ export default class App extends Component {
           return <Spinner />;
         case images.length > 0:
           return (
-            <Images
-              images={images}
-              removeImage={this.removeImage}
-              onError={this.onError}
-            />
+            <div>
+              <Images
+                images={images}
+                removeImage={this.removeImage}
+                onError={this.onError}
+              />
+              <button className="Button-push">Upload to Proclaim</button>
+            </div>
           );
         default:
           return <Buttons onChange={this.onChange} />;
@@ -121,7 +126,7 @@ export default class App extends Component {
 
     return (
       <div className="container">
-        <Notifications />
+        <ToastContainer />
         <div className="buttons">{content()}</div>
       </div>
     );
