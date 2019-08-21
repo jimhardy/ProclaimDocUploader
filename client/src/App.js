@@ -3,7 +3,6 @@ import Spinner from './Spinner';
 import Login from './login';
 import Image from './Image';
 import Axios from 'axios';
-import FlipMove from 'react-flip-move';
 import Buttons from './Buttons';
 import { API_URL } from './config';
 import './App.css';
@@ -144,18 +143,16 @@ export default class App extends Component {
         case images.length > 0:
           return (
             <div>
-              <FlipMove>
-                {this.state.images.map((image, i) => (
-                  <Image
-                    removeImage={this.removeImage}
-                    image={image}
-                    onError={this.onError}
-                    handleChange={this.addImageDescription}
-                    id={i}
-                    key={i}
-                  />
-                ))}
-              </FlipMove>
+              {this.state.images.map((image, i) => (
+                <Image
+                  removeImage={this.removeImage}
+                  image={image}
+                  onError={this.onError}
+                  handleChange={this.addImageDescription}
+                  id={i}
+                  key={i}
+                />
+              ))}
 
               <button className="Form-button">Upload to Proclaim</button>
             </div>
