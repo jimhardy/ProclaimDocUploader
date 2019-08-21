@@ -9,6 +9,7 @@ const soap = require('soap-as-promised');
 const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 // aws ===============================================================
 // const aws = require('aws-sdk');
@@ -61,8 +62,14 @@ app.post('/image-upload', (req, res) => {
 });
 
 app.post('/delete-image', (req, res) => {
-  console.log(req.body);
-  cloudinary.uploader.destroy(req.body);
+  try {
+    cloudinary.uploader.destroy(req.body.id).then(results => {
+      return res.json(results);
+    });
+    // console.log(cb);
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 let validMgas = [

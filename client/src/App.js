@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-// import Notifications, { notify } from 'react-notify-toast';
 import Spinner from './Spinner';
 import Login from './login';
-import Images from './Images';
+import Image from './Image';
+import Axios from 'axios';
+import FlipMove from 'react-flip-move';
 import Buttons from './Buttons';
 import { API_URL } from './config';
 import './App.css';
@@ -64,7 +65,6 @@ export default class App extends Component {
 
     try {
       this.setState({ loading: true });
-
       fetch(`${API_URL}/image-upload`, {
         method: 'POST',
         body: formData
@@ -82,7 +82,9 @@ export default class App extends Component {
         .then(images => {
           this.setState({
             loading: false,
-            images
+            images: images.map(image => {
+              return { ...image, description: null };
+            })
           });
         })
         .catch(err => {
@@ -97,13 +99,29 @@ export default class App extends Component {
     return this.state.images.filter(image => image.public_id !== id);
   };
 
-  removeImage = id => {
-    console.log(id);
-    fetch(`${API_URL}/delete-image`, {
-      method: 'POST',
-      body: id
+  removeImage = async id => {
+    Axios.post(`${API_URL}/delete-image`, { id }).then(res => {
+      if (res.status === 200) {
+        console.log('deleted');
+      }
     });
-    this.setState({ images: this.filter(id) });
+    const updatedArr = await this.state.images.filter(
+      image => image.public_id !== id
+    );
+
+    await this.setState(st => ({
+      images: updatedArr
+    }));
+  };
+
+  addImageDescription = async (id, value) => {
+    const updatedArr = await this.state.images.map(image => {
+      if (image.public_id === id) {
+        return { ...image, description: value };
+      }
+      return image;
+    });
+    await this.setState({ images: updatedArr });
   };
 
   onError = id => {
@@ -126,11 +144,19 @@ export default class App extends Component {
         case images.length > 0:
           return (
             <div>
-              <Images
-                images={images}
-                removeImage={this.removeImage}
-                onError={this.onError}
-              />
+              <FlipMove>
+                {this.state.images.map((image, i) => (
+                  <Image
+                    removeImage={this.removeImage}
+                    image={image}
+                    onError={this.onError}
+                    handleChange={this.addImageDescription}
+                    id={i}
+                    key={i}
+                  />
+                ))}
+              </FlipMove>
+
               <button className="Form-button">Upload to Proclaim</button>
             </div>
           );
