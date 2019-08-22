@@ -24,6 +24,7 @@ class Image extends Component {
             src={this.props.image.secure_url}
             alt=""
             onError={() => this.props.onError(this.props.image.public_id)}
+            onClick={() => window.open(this.props.image.secure_url, '_blank')}
           />
         </div>
         <textarea

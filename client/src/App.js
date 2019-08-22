@@ -153,6 +153,17 @@ export default class App extends Component {
     this.setState({ loading: false });
   };
 
+  uploadToProclaim = async evt => {
+    const uploadArr = this.state.images.map(image => {
+      return {
+        imageUrl: image.secure_url,
+        description: image.description,
+        timestamp: new Date()
+      };
+    });
+    console.log(uploadArr);
+  };
+
   render() {
     const { loading, images, loggedIn } = this.state;
 
@@ -165,6 +176,9 @@ export default class App extends Component {
         case images.length > 0:
           return (
             <div>
+              <button className="Form-button" onClick={this.uploadToProclaim}>
+                Upload all to Proclaim
+              </button>
               {this.state.images.map((image, i) => (
                 <Image
                   removeImage={this.removeImage}
@@ -176,8 +190,6 @@ export default class App extends Component {
                   value={image.description}
                 />
               ))}
-
-              <button className="Form-button">Upload to Proclaim</button>
             </div>
           );
         default:

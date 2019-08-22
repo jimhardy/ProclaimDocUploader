@@ -20,38 +20,38 @@ h1 {
   justify-content: space-around;
 }
 
-.buttons {
+.button {
   display: flex;
   align-items: center;
   justify-content: space-around;
   flex-wrap: wrap;
   height: 75vh;
-}
-
-.button {
   margin: 0 10vw;
 }
+
 .Form-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: row;
   padding: 1rem;
 }
 
 .Form-input {
   font-weight: 100;
-  width: 20vw;
+  width: 40vw;
   height: 50px;
   font-size: 30px;
   line-height: 50px;
   padding-left: 10px;
+  display: flex;
+  flex-direction: row;
 }
 
 .Form-button {
   font-weight: 400;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: sticky;
+  top: 0;
   font-size: 30px;
   width: 100%;
   height: 50px;
@@ -60,6 +60,13 @@ h1 {
   background-color: #a29ccc;
   /* border: 2px solid #555555; */
   margin-top: 10px;
+  outline: none;
+}
+
+.Upload-button {
+  display: flex;
+  justify-content: center;
+  align-content: center;
 }
 
 .images {
@@ -70,28 +77,30 @@ h1 {
   flex: 1;
 }
 
+.Image-description {
+  width: 100%;
+  font-weight: 100;
+  height: 50px;
+  font-size: 15px;
+}
+
 .delete {
   position: relative;
   top: 16px;
   right: 15px;
 }
 
-.button svg,
-.delete svg {
-  filter: drop-shadow(3px 3px 3px #999);
-  transition: 0.3s;
-  transform: rotate(-0.2deg);
-}
-
-.button svg:hover,
-.delete svg:hover {
-  filter: drop-shadow(4px 4px 4px #999);
-  transform: rotate(-0.6deg);
-  cursor: pointer;
-}
-
-.delete svg {
+.delete,
+.Upload-button {
   filter: drop-shadow(1px 1px 1px #999);
+}
+
+.delete:hover,
+.Upload-button:hover,
+.Form-button:hover {
+  filter: drop-shadow(4px 4px 4px #999);
+  transform: translateY((-2px));
+  cursor: pointer;
 }
 
 input[type='file'] {
@@ -100,10 +109,15 @@ input[type='file'] {
 }
 
 img {
-  max-height: 420px;
-  max-width: 420px;
+  max-height: 40vw;
+  max-width: 40vw;
   padding: 10px;
   border: 1px dashed #999;
+  width: 100%;
+}
+
+img:hover {
+  cursor: pointer;
 }
 
 /* Loading */
@@ -225,11 +239,4 @@ img {
   to {
     text-shadow: 2px 4px 4px rgba(0, 0, 0, 0.55);
   }
-}
-
-.Image-description {
-  width: 100%;
-  font-weight: 100;
-  height: 50px;
-  font-size: 15px;
 }
