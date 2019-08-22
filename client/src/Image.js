@@ -26,10 +26,12 @@ class Image extends Component {
             onError={() => this.props.onError(this.props.image.public_id)}
           />
         </div>
-        <input
+        <textarea
+          className="Image-description"
           type="text"
           placeholder="image description"
           onChange={this.handleChange}
+          value={this.props.value}
         />
       </div>
     );

@@ -11,31 +11,6 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// aws ===============================================================
-// const aws = require('aws-sdk');
-// const multer = require('multer');
-// const multerS3 = require('multer-s3');
-// const s3 = new aws.S3();
-
-// app.use(bodyParser.json());
-
-// let upload = multer({
-//   storage: multerS3({
-//     s3: s3,
-//     bucket: config.bucketName,
-//     key: (req, file, cb) => {
-//       cb(null, Date.now().toString());
-//     }
-//   })
-// });
-
-// app.post('/upload', upload.array('files', 10), (req, res, next) => {
-//   console.log(`server side: ${req.body}`);
-//   res.send(`Successfully uploaded ${req.files}`);
-// });
-// ===================================================================
-// const imageRegex = /\.(jpe?g|png|gif|bmp|tiff)$/i;
-
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
@@ -72,31 +47,62 @@ app.post('/delete-image', (req, res) => {
   }
 });
 
-let validMgas = [
-  'Pukka',
-  'Pukka Private Car',
-  'Tansar',
-  'Anjuna',
-  'New India',
-  'Claims',
-  'MGA Claims'
-];
-
-app.post('/pushtoproclaim', (req, res) => {
-  console.log(req.body);
-  let ref = req.body.ref;
-  let mga = req.body.mga;
-  let field = req.body.field;
-  let content = req.body.content;
-  let action = req.body.action;
-  if (validMgas.includes(mga)) {
-    pushToProclaim(ref, mga, field, content, action);
-    console.log('MGAType: OK');
-  } else {
-    console.log('MGAType: INVALID');
-  }
-  res.redirect('/');
+app.post('/login', async (req, res) => {
+  const caseRef = req.body.caseRef;
+  const vehReg = req.body.vehReg;
+  const login = await proclaimHandshake(caseRef, vehReg);
+  return res.json(login);
 });
+
+// app.post('/pushtoproclaim', (req, res) => {
+//   console.log(req.body);
+//   let ref = req.body.ref;
+//   let mga = req.body.mga;
+//   let field = req.body.field;
+//   let content = req.body.content;
+//   let action = req.body.action;
+//   if (validMgas.includes(mga)) {
+//     pushToProclaim(ref, mga, field, content, action);
+//     console.log('MGAType: OK');
+//   } else {
+//     console.log('MGAType: INVALID');
+//   }
+//   res.redirect('/');
+// });
+
+const proclaimHandshake = async (caseRef, vehReg) => {
+  const proClaimUrl = process.env.WSURL;
+  try {
+    const soapClient = await soap.createClient(proClaimUrl, {
+      disableCache: true
+    });
+
+    await soapClient.proResetLogins({
+      cuser: 'axatpiws'
+    });
+    const login = await soapClient.proLogin({
+      cuser: 'axatpiws',
+      cpassword: 's3cuR1ty'
+    });
+    const getCase = await soapClient.proGetCase({
+      csessionid: login.csessionid,
+      ccaseno: caseRef
+    });
+    if (getCase.cstatus === 'OK') {
+      const caseType = getCase.icasetype;
+
+      const vehRegTest = await soapClient.proGetData({
+        csessionid: login.csessionid,
+        ccaseno: caseRef,
+        ccasetype: caseType,
+        cfieldname: 'PH Reg Number.Text'
+      });
+      return vehRegTest.cfieldvalue === vehReg;
+    }
+  } catch (e) {
+    console.log(e);
+  }
+};
 
 let pushToProclaim = async (
   caseRef,

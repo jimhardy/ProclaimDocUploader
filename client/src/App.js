@@ -2,9 +2,10 @@ import React, { Component } from 'react';
 import Spinner from './Spinner';
 import Login from './login';
 import Image from './Image';
-import Axios from 'axios';
-import Buttons from './Buttons';
+import axios from 'axios';
+import Upload from './Upload';
 import { API_URL } from './config';
+// import uuid from 'uuid/v4';
 import './App.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -15,8 +16,9 @@ export default class App extends Component {
     images: [],
     login: {
       caseRef: '',
-      password: ''
-    }
+      vehReg: ''
+    },
+    loggedIn: false
   };
 
   componentDidMount() {
@@ -24,7 +26,9 @@ export default class App extends Component {
       if (res.ok) {
         return this.setState({ loading: false });
       }
-      toast('No response from server');
+      toast.error('No response from server', {
+        position: toast.POSITION.TOP_CENTER
+      });
     });
   }
 
@@ -82,7 +86,7 @@ export default class App extends Component {
           this.setState({
             loading: false,
             images: images.map(image => {
-              return { ...image, description: null };
+              return { ...image, description: '' };
             })
           });
         })
@@ -99,7 +103,7 @@ export default class App extends Component {
   };
 
   removeImage = async id => {
-    Axios.post(`${API_URL}/delete-image`, { id }).then(res => {
+    axios.post(`${API_URL}/delete-image`, { id }).then(res => {
       if (res.status === 200) {
         console.log('deleted');
       }
@@ -127,19 +131,37 @@ export default class App extends Component {
     this.setState({ images: this.filter(id) });
   };
 
-  onLogin = evt => {
-    this.setState({ login: evt });
+  onLogin = async evt => {
+    await this.setState(st => ({ login: evt, loading: true }));
+    console.log(this.state.loading);
+    const login = await this.state.login;
+
+    await axios
+      .post(`${API_URL}/login`, {
+        caseRef: login.caseRef,
+        vehReg: login.vehReg
+      })
+      .then(res => {
+        if (res.data) {
+          this.setState({ loggedIn: true });
+        } else {
+          toast.error('Invalid Case Reference or Vehicle Registration', {
+            position: toast.POSITION.TOP_CENTER
+          });
+        }
+      });
+    this.setState({ loading: false });
   };
 
   render() {
-    const { loading, images, login } = this.state;
+    const { loading, images, loggedIn } = this.state;
 
     const content = () => {
       switch (true) {
-        case !login.caseRef && !login.password:
-          return <Login handleSubmit={this.onLogin} />;
         case loading:
           return <Spinner />;
+        case !loggedIn:
+          return <Login handleSubmit={this.onLogin} />;
         case images.length > 0:
           return (
             <div>
@@ -150,7 +172,8 @@ export default class App extends Component {
                   onError={this.onError}
                   handleChange={this.addImageDescription}
                   id={i}
-                  key={i}
+                  key={image.public_id}
+                  value={image.description}
                 />
               ))}
 
@@ -158,7 +181,7 @@ export default class App extends Component {
             </div>
           );
         default:
-          return <Buttons onChange={this.onChange} />;
+          return <Upload onChange={this.onChange} />;
       }
     };
 

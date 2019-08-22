@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 class Login extends Component {
   state = {
     caseRef: null,
-    password: null
+    vehReg: null
   };
 
   handleChange = evt => {
@@ -12,7 +12,6 @@ class Login extends Component {
 
   handleSubmit = evt => {
     evt.preventDefault();
-    console.log(evt);
     this.props.handleSubmit(this.state);
   };
 
@@ -32,12 +31,12 @@ class Login extends Component {
               className="Form-input"
             />
             <input
-              type="password"
-              name="password"
-              value={this.state.password || ''}
+              type="text"
+              name="vehReg"
+              value={this.state.vehReg || ''}
               onChange={this.handleChange}
-              placeholder="Password"
-              id="password"
+              placeholder="Vehicle Registration"
+              id="vehReg"
               className="Form-input"
             />
             <button className="Form-button">Login</button>
