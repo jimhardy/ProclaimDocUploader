@@ -99,11 +99,13 @@ h1 {
 .Upload-button:hover,
 .Form-button:hover {
   filter: drop-shadow(4px 4px 4px #999);
-  transform: translateY((-2px));
+  transform: translateY((-10px));
+  transition: 1s;
   cursor: pointer;
 }
 
 input[type='file'] {
+  cursor: pointer;
   visibility: hidden;
   position: absolute;
 }
@@ -113,7 +115,7 @@ img {
   max-width: 40vw;
   padding: 10px;
   border: 1px dashed #999;
-  width: 100%;
+  width: 40vw;
 }
 
 img:hover {
@@ -184,6 +186,11 @@ img:hover {
 
 .spinner {
   animation: spin 6s infinite;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
 }
 
 .spinner svg {

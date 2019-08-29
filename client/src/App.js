@@ -200,7 +200,7 @@ export default class App extends Component {
     return (
       <div className="container">
         <ToastContainer />
-        <div className="buttons">{content()}</div>
+        <div className="button">{content()}</div>
       </div>
     );
   }

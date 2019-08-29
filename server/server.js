@@ -23,13 +23,17 @@ app.get('/wake-up', (req, res) => res.send('👌'));
 
 app.post('/image-upload', (req, res) => {
   const values = Object.values(req.files);
-  const promises = values.map(image => cloudinary.uploader.upload(image.path));
+  const promises = values.map(image =>
+    cloudinary.uploader.upload(image.path, e => {
+      console.log(e.progress);
+    })
+  );
 
   Promise.all(promises)
     // .then(results => res.json(results))
     .then(results => {
       results.map(file => {
-        // console.log(file);
+        console.log(file);
       });
       return res.json(results);
     })
