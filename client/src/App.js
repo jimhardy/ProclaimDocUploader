@@ -133,7 +133,6 @@ export default class App extends Component {
 
   onLogin = async evt => {
     await this.setState(st => ({ login: evt, loading: true }));
-    console.log(this.state.loading);
     const login = await this.state.login;
 
     await axios
@@ -142,8 +141,13 @@ export default class App extends Component {
         vehReg: login.vehReg
       })
       .then(res => {
+        console.log(res.data);
         if (res.data) {
-          this.setState({ loggedIn: true });
+          this.setState({
+            loggedIn: true,
+            caseType: res.data.caseType,
+            caseRef: res.data.caseRef
+          });
         } else {
           toast.error('Invalid Case Reference or Vehicle Registration', {
             position: toast.POSITION.TOP_CENTER
@@ -162,6 +166,15 @@ export default class App extends Component {
       };
     });
     console.log(uploadArr);
+    await axios
+      .post(`${API_URL}/pushtoproclaim`, {
+        data: uploadArr,
+        caseRef: this.state.caseRef,
+        caseType: this.state.caseType
+      })
+      .then(res => {
+        console.log(res.data);
+      });
   };
 
   render() {

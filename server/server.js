@@ -21,11 +21,18 @@ app.use(formData.parse());
 
 app.get('/wake-up', (req, res) => res.send('👌'));
 
+app.post('/login', async (req, res) => {
+  const caseRef = req.body.caseRef;
+  const vehReg = req.body.vehReg;
+  const login = await proclaimHandshake(caseRef, vehReg);
+  return res.json(login);
+});
+
 app.post('/image-upload', (req, res) => {
   const values = Object.values(req.files);
   const promises = values.map(image =>
     cloudinary.uploader.upload(image.path, e => {
-      console.log(e.progress);
+      // console.log(e.progress); // progress bar? this doesn't seem to work in node
     })
   );
 
@@ -33,7 +40,7 @@ app.post('/image-upload', (req, res) => {
     // .then(results => res.json(results))
     .then(results => {
       results.map(file => {
-        console.log(file);
+        // console.log(file);
       });
       return res.json(results);
     })
@@ -51,28 +58,33 @@ app.post('/delete-image', (req, res) => {
   }
 });
 
-app.post('/login', async (req, res) => {
-  const caseRef = req.body.caseRef;
-  const vehReg = req.body.vehReg;
-  const login = await proclaimHandshake(caseRef, vehReg);
-  return res.json(login);
+app.post('/pushtoproclaim', async (req, res) => {
+  // const data = [];
+  // await req.body.data.map((i, idx) =>
+  //   data.push(
+  //     {
+  //       id: idx + 1,
+  //       fieldname: 'Cloud Image Table.Image Description.Text',
+  //       fieldvalue: i.description
+  //     },
+  //     {
+  //       id: idx + 1,
+  //       fieldname: 'Image URL.Text',
+  //       fieldvalue: i.imageUrl
+  //     },
+  //     {
+  //       id: idx + 1,
+  //       fieldname: 'Image Timestamp.Text',
+  //       fieldvalue: i.timestamp
+  //     }
+  //   )
+  // );
+  try {
+    pushToProclaim(req.body.caseRef, req.body.caseType, req.body.data);
+  } catch (err) {
+    console.log(err);
+  }
 });
-
-// app.post('/pushtoproclaim', (req, res) => {
-//   console.log(req.body);
-//   let ref = req.body.ref;
-//   let mga = req.body.mga;
-//   let field = req.body.field;
-//   let content = req.body.content;
-//   let action = req.body.action;
-//   if (validMgas.includes(mga)) {
-//     pushToProclaim(ref, mga, field, content, action);
-//     console.log('MGAType: OK');
-//   } else {
-//     console.log('MGAType: INVALID');
-//   }
-//   res.redirect('/');
-// });
 
 const proclaimHandshake = async (caseRef, vehReg) => {
   const proClaimUrl = process.env.WSURL;
@@ -101,22 +113,15 @@ const proclaimHandshake = async (caseRef, vehReg) => {
         ccasetype: caseType,
         cfieldname: 'PH Reg Number.Text'
       });
-      return vehRegTest.cfieldvalue === vehReg;
+      return { caseType, caseRef };
     }
   } catch (e) {
     console.log(e);
   }
 };
 
-let pushToProclaim = async (
-  caseRef,
-  claimType,
-  fieldName,
-  fieldContent,
-  linkedAction
-) => {
+const pushToProclaim = async (caseRef, caseType, data) => {
   const proClaimUrl = process.env.WSURL;
-
   try {
     const soapClient = await soap.createClient(proClaimUrl, {
       disableCache: true
@@ -130,20 +135,11 @@ let pushToProclaim = async (
       cpassword: 's3cuR1ty'
     });
 
-    // new blank array
-    let newCaseData = [];
-
-    // push case data into newCaseData array (fieldname & fielddata)
-    newCaseData.push({
-      fieldname: fieldName,
-      fielddata: fieldContent
-    });
-
     // open
     const openCase = await soapClient.proCaseOpen({
       csessionid: login.csessionid,
       ccaseno: caseRef,
-      ccasetype: claimType,
+      ccasetype: caseType,
       coperation: 'Update'
     });
     console.log('CaseOpen: ', openCase.cstatus);
@@ -151,49 +147,46 @@ let pushToProclaim = async (
     // unlock
     const caseUnlock = await soapClient.proCaseUpdate({
       csessionid: login.csessionid,
-      ccaseno: openCase.ccaseno,
+      ccaseno: caseRef,
       coperation: 'Unlock'
     });
     console.log('CaseUnlock: ', caseUnlock.cstatus);
 
     // put data
-    let caseData = await soapClient.proPutCaseScreenData({
-      csessionid: login.csessionid,
-      ccasetype: claimType,
-      ccaseno: openCase.ccaseno,
-      ttScreenData: { ttScreenDataRow: newCaseData }
+    const caseData = await data.map(async row => {
+      let tableRow = await {
+        csessionid: login.csessionid,
+        ccaseno: caseRef,
+        cMatrix: 'CloudImagesTable',
+        ttTableData: {
+          ttTableDataRow: await [
+            {
+              fieldname: 'Cloud Image Table.Image Description.Text',
+              fieldvalue: await row.description
+            },
+            {
+              fieldname: 'Image URL.Text',
+              fieldvalue: await row.imageUrl
+            },
+            {
+              fieldname: 'Image Timestamp.Text',
+              fieldvalue: await row.timestamp
+            }
+          ]
+        }
+      };
+      console.log(tableRow);
+      let tableData = await soapClient.proPutCaseTableDataMatrix(tableRow);
+      console.log('Case Update: ', tableData.cstatus);
     });
-
-    // put tableData
-    // let caseData = await soapClient.proPutCaseTableDataMatrix({
-    //     csessionid: login.csessionid,
-    //     ccasetype: claimType,
-    //     ccaseno: openCase.ccaseno,
-    //     cMatrix: 'NamedDriverTable',
-    //     ttTableData: { ttTableDataRow: newTableData }
-    // });
-    // console.log('PutCaseData: ', caseData.cstatus);
 
     //update
     await soapClient.proCaseUpdate({
       csessionid: login.csessionid,
-      ccaseno: openCase.ccaseno,
+      ccaseno: caseRef,
       coperation: 'Save'
     });
-    console.log('Proclaim Case updated: ', openCase.ccaseno);
-
-    // run linked action if required
-    if (linkedAction !== '') {
-      await soapClient.proRunLinkedAction({
-        csessionid: login.csessionid,
-        ccasetype: claimType,
-        ccaseno: openCase.ccaseno,
-        clinkedaction: linkedAction
-      });
-      console.log('LinkedAction: ', linkedAction);
-    } else {
-      console.log('no linked action selected');
-    }
+    console.log('Proclaim Case updated: ', caseRef);
 
     // catch errors
   } catch (Err) {

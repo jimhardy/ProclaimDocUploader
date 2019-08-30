@@ -187,7 +187,7 @@ img:hover {
 .spinner {
   animation: spin 6s infinite;
   display: flex;
-  flex-wrap: wrap;
+  /* flex-wrap: wrap; */
   justify-content: center;
   align-items: center;
   flex: 1;
@@ -196,7 +196,18 @@ img:hover {
 .spinner svg {
   background: #f2f2f2;
   border-radius: 50%;
+  position: absolute;
 }
+
+.crash {
+  position: absolute;
+  right: 130px;
+  top: -100px;
+  transform: scale(1.1);
+  opacity: 0;
+  animation: crash 6s infinite;
+}
+
 @keyframes spin {
   0% {
     -webkit-transform: scale(0.1);
