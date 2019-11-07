@@ -69,15 +69,13 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/image-upload', async (req, res) => {
+  console.log('===========================');
   const values = Object.values(req.files);
-  // const promises = values.map(
-  // const promises = async () => {
   const uploads = [];
   for (let i = 0; i < values.length; i++) {
     const path = values[i].path;
-    const imageData = () => {
-      return image2base64(path);
-    };
+    const imageData = await image2base64(path);
+    console.log(imageData);
     await s3Upload(
       values[i].name.replace(/\s/g, '-'),
       imageData,
@@ -95,7 +93,6 @@ app.post('/image-upload', async (req, res) => {
     //     // console.log(e.progress); // progress bar? this doesn't seem to work in node
     // })
   }
-  console.log('===========================');
   console.log(uploads);
   return res.json(uploads);
   // };
