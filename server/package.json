@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server"
+    "dev": "nodemon server",
+    "debug": "nodemon --inspect server"
   },
   "author": "Jim Hardy",
   "license": "",
@@ -17,6 +18,7 @@
     "dotenv": "^6.0.0",
     "express": "^4.16.3",
     "express-form-data": "^2.0.6",
+    "image-to-base64": "^2.0.1",
     "multer": "^1.4.2",
     "multer-s3": "^2.9.0",
     "soap-as-promised": "^1.26.0"

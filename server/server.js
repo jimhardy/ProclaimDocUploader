@@ -1,15 +1,55 @@
-require('dotenv').config();
 const config = require('./config');
+const uuid = require('uuid/v1');
 const express = require('express');
 const cloudinary = require('cloudinary');
+const AWS = require('aws-sdk');
 const formData = require('express-form-data');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const soap = require('soap-as-promised');
 const app = express();
+const image2base64 = require('image-to-base64');
+
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+require('dotenv').config();
+
+const s3 = new AWS.S3();
+
+const s3Store = (name, base64String, contentType) => {
+  return new Promise((resolve, reject) => {
+    const params = {
+      Bucket: 'a365-doc-uploader',
+      Key: `docs/${name}`,
+      Body: Buffer.from(base64String.toString(), 'base64'),
+      // Body: base64String,
+      ContentEncoding: 'base64',
+      ContentType: contentType
+    };
+    console.log(params);
+    s3.putObject(params, (err, data) => {
+      console.log(data);
+      if (err) {
+        console.log(err);
+        reject(err);
+      } else {
+        console.log(
+          `https://a365-doc-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`
+        );
+        resolve(
+          `https://a365-doc-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`
+        );
+      }
+    });
+  });
+};
+
+const s3Upload = (name, base64String, contentType) => {
+  // const imageData = base64String.split('data:image/png;base64,')[1];
+  return s3Store(name, base64String, contentType);
+};
 
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -28,23 +68,38 @@ app.post('/login', async (req, res) => {
   return res.json(login);
 });
 
-app.post('/image-upload', (req, res) => {
+app.post('/image-upload', async (req, res) => {
   const values = Object.values(req.files);
-  const promises = values.map(image =>
-    cloudinary.uploader.upload(image.path, e => {
-      // console.log(e.progress); // progress bar? this doesn't seem to work in node
-    })
-  );
-
-  Promise.all(promises)
-    // .then(results => res.json(results))
-    .then(results => {
-      results.map(file => {
-        // console.log(file);
-      });
-      return res.json(results);
-    })
-    .catch(err => res.status(400).json(err));
+  // const promises = values.map(
+  // const promises = async () => {
+  const uploads = [];
+  for (let i = 0; i < values.length; i++) {
+    const path = values[i].path;
+    const imageData = () => {
+      return image2base64(path);
+    };
+    await s3Upload(
+      values[i].name.replace(/\s/g, '-'),
+      imageData,
+      values[i].type
+    )
+      .then(url => {
+        uploads.push({ url: url, name: values[i].name, id: uuid() });
+        // console.log(results);
+        // results.map(file => {
+        //   urls.push(file);
+        // });
+      })
+      .catch(err => res.status(400).json(err));
+    // cloudinary.uploader.upload(image.path, e => {
+    //     // console.log(e.progress); // progress bar? this doesn't seem to work in node
+    // })
+  }
+  console.log('===========================');
+  console.log(uploads);
+  return res.json(uploads);
+  // };
+  // .then(results => res.json(results))
 });
 
 app.post('/delete-image', (req, res) => {
@@ -59,28 +114,12 @@ app.post('/delete-image', (req, res) => {
 });
 
 app.post('/pushtoproclaim', async (req, res) => {
-  // const data = [];
-  // await req.body.data.map((i, idx) =>
-  //   data.push(
-  //     {
-  //       id: idx + 1,
-  //       fieldname: 'Cloud Image Table.Image Description.Text',
-  //       fieldvalue: i.description
-  //     },
-  //     {
-  //       id: idx + 1,
-  //       fieldname: 'Image URL.Text',
-  //       fieldvalue: i.imageUrl
-  //     },
-  //     {
-  //       id: idx + 1,
-  //       fieldname: 'Image Timestamp.Text',
-  //       fieldvalue: i.timestamp
-  //     }
-  //   )
-  // );
   try {
-    pushToProclaim(req.body.caseRef, req.body.caseType, req.body.data);
+    pushToProclaim(req.body.caseRef, req.body.caseType, req.body.data).then(
+      results => {
+        return res.json(results);
+      }
+    );
   } catch (err) {
     console.log(err);
   }
@@ -102,18 +141,18 @@ const proclaimHandshake = async (caseRef, vehReg) => {
     });
     const getCase = await soapClient.proGetCase({
       csessionid: login.csessionid,
-      ccaseno: caseRef
+      ccaseno: caseRef.toUpperCase()
     });
     if (getCase.cstatus === 'OK') {
       const caseType = getCase.icasetype;
 
       const vehRegTest = await soapClient.proGetData({
         csessionid: login.csessionid,
-        ccaseno: caseRef,
+        ccaseno: caseRef.toUpperCase(),
         ccasetype: caseType,
         cfieldname: 'PH Reg Number.Text'
       });
-      return { caseType, caseRef };
+      return { caseType, caseRef, vehRegTest };
     }
   } catch (e) {
     console.log(e);
@@ -121,6 +160,7 @@ const proclaimHandshake = async (caseRef, vehReg) => {
 };
 
 const pushToProclaim = async (caseRef, caseType, data) => {
+  // console.log(data);
   const proClaimUrl = process.env.WSURL;
   try {
     const soapClient = await soap.createClient(proClaimUrl, {
@@ -135,59 +175,94 @@ const pushToProclaim = async (caseRef, caseType, data) => {
       cpassword: 's3cuR1ty'
     });
 
-    // open
+    // Open and Update case
     const openCase = await soapClient.proCaseOpen({
       csessionid: login.csessionid,
       ccaseno: caseRef,
       ccasetype: caseType,
       coperation: 'Update'
     });
-    console.log('CaseOpen: ', openCase.cstatus);
+    if (openCase.cstatus !== 'OK') {
+      console.log(openCase.cerror);
+    }
+    console.log(`Open case: ${openCase.cstatus}`);
 
-    // unlock
-    const caseUnlock = await soapClient.proCaseUpdate({
+    // Lock case
+    const lockCase = await soapClient.proCaseUpdate({
       csessionid: login.csessionid,
       ccaseno: caseRef,
-      coperation: 'Unlock'
+      coperation: 'Unlock,Lock'
     });
-    console.log('CaseUnlock: ', caseUnlock.cstatus);
+    if (lockCase.cstatus !== 'OK') {
+      console.log(lockCase.cerror);
+    }
+    console.log(`Unlock/Lock case: ${lockCase.cstatus}`);
 
     // put data
-    const caseData = await data.map(async row => {
-      let tableRow = await {
+    // use async npm module maybe?
+    // data.forEach(async row => {
+    let imgArr = [];
+    for (let i = 0; i < data.length; i++) {
+      const tableRow = {
         csessionid: login.csessionid,
         ccaseno: caseRef,
         cMatrix: 'CloudImagesTable',
         ttTableData: {
-          ttTableDataRow: await [
-            {
-              fieldname: 'Cloud Image Table.Image Description.Text',
-              fieldvalue: await row.description
-            },
-            {
-              fieldname: 'Image URL.Text',
-              fieldvalue: await row.imageUrl
-            },
-            {
-              fieldname: 'Image Timestamp.Text',
-              fieldvalue: await row.timestamp
-            }
+          ttTableDataRow: [
+            [
+              {
+                fieldname: 'Image Description.Text',
+                fieldvalue: data[i].description
+              }
+            ],
+            [
+              {
+                fieldname: 'Image URL.Text',
+                fieldvalue: data[i].imageUrl
+              }
+            ],
+            [
+              {
+                fieldname: 'Image Timestamp.Text',
+                fieldvalue: data[i].timestamp
+              }
+            ]
           ]
         }
       };
-      console.log(tableRow);
-      let tableData = await soapClient.proPutCaseTableDataMatrix(tableRow);
-      console.log('Case Update: ', tableData.cstatus);
-    });
+      try {
+        const tableData = await soapClient.proPutCaseTableDataMatrix(tableRow);
+        imgArr.push(tableRow);
+        console.log('Row update: ', tableData.cstatus);
+      } catch (error) {
+        console.log(error);
+      }
+    }
 
-    //update
-    await soapClient.proCaseUpdate({
+    // update Save
+    const saveCase = await soapClient.proCaseUpdate({
       csessionid: login.csessionid,
       ccaseno: caseRef,
       coperation: 'Save'
     });
-    console.log('Proclaim Case updated: ', caseRef);
+    if (saveCase.cstatus !== 'OK') {
+      console.log(saveCase.cerror);
+    }
+    console.log(`Save case: ${saveCase.cstatus}`);
 
+    // update Unlock
+    const unlockCase = await soapClient.proCaseUpdate({
+      csessionid: login.csessionid,
+      ccaseno: caseRef,
+      coperation: 'Unlock'
+    });
+    if (unlockCase.cstatus !== 'OK') {
+      console.log(`error ${unlockCase.cerror}`);
+    }
+    console.log(`Unlock case: ${unlockCase.cstatus}`);
+    console.log('Proclaim Case updated: ', caseRef);
+    console.log('...');
+    return imgArr;
     // catch errors
   } catch (Err) {
     console.log('FAILED:');
@@ -195,4 +270,6 @@ const pushToProclaim = async (caseRef, caseType, data) => {
   }
 };
 
-app.listen(process.env.PORT || 8080, () => console.log('server running'));
+app.listen(process.env.PORT || 8080, () => {
+  console.log(`server running on ${process.env.PORT}`);
+});
