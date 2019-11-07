@@ -9,6 +9,7 @@ const bodyParser = require('body-parser');
 const soap = require('soap-as-promised');
 const app = express();
 const image2base64 = require('image-to-base64');
+const moment = require('moment');
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -38,9 +39,10 @@ const s3Store = (name, base64String, contentType) => {
         console.log(
           `https://a365-doc-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`
         );
-        resolve(
-          `https://a365-doc-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`
-        );
+        resolve({
+          url: `https://a365-doc-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`,
+          ETag: data.ETag.replace(/['"]+/g, '')
+        });
       }
     });
   });
@@ -75,23 +77,15 @@ app.post('/image-upload', async (req, res) => {
   for (let i = 0; i < values.length; i++) {
     const path = values[i].path;
     const imageData = await image2base64(path);
-    console.log(imageData);
-    await s3Upload(
-      values[i].name.replace(/\s/g, '-'),
-      imageData,
-      values[i].type
-    )
-      .then(url => {
-        uploads.push({ url: url, name: values[i].name, id: uuid() });
-        // console.log(results);
-        // results.map(file => {
-        //   urls.push(file);
-        // });
+    const fileName = `${moment().format('DDMMYYYYhhmmsssss')}-${
+      values[i].name
+    }`;
+    console.log(fileName);
+    await s3Upload(fileName.replace(/\s/g, '-'), imageData, values[i].type)
+      .then(file => {
+        uploads.push({ url: file.url, name: fileName, id: file.ETag });
       })
       .catch(err => res.status(400).json(err));
-    // cloudinary.uploader.upload(image.path, e => {
-    //     // console.log(e.progress); // progress bar? this doesn't seem to work in node
-    // })
   }
   console.log(uploads);
   return res.json(uploads);
@@ -100,14 +94,28 @@ app.post('/image-upload', async (req, res) => {
 });
 
 app.post('/delete-image', (req, res) => {
-  try {
-    cloudinary.uploader.destroy(req.body.id).then(results => {
-      return res.json(results);
-    });
-    // console.log(cb);
-  } catch (err) {
-    console.log(err);
-  }
+  // try {
+  //   cloudinary.uploader.destroy(req.body.id).then(results => {
+  //     return res.json(results);
+  //   });
+  //   // console.log(cb);
+  // } catch (err) {
+  //   console.log(err);
+  // }
+  const params = {
+    Bucket: 'docs',
+    Key: req.body.id
+  };
+  console.log(params);
+  s3.deleteObject(params, (err, data) => {
+    if (err) console.log(err);
+    // an error occurred
+    else console.log(data); // successful response
+    /*
+     data = {
+     }
+     */
+  });
 });
 
 app.post('/pushtoproclaim', async (req, res) => {
