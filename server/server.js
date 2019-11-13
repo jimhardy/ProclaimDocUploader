@@ -1,7 +1,5 @@
-const config = require('./config');
-const uuid = require('uuid/v1');
+// const config = require('./config');
 const express = require('express');
-const cloudinary = require('cloudinary');
 const AWS = require('aws-sdk');
 const formData = require('express-form-data');
 const cors = require('cors');
@@ -22,7 +20,7 @@ const s3 = new AWS.S3();
 const s3Store = (name, base64String, contentType) => {
   return new Promise((resolve, reject) => {
     const params = {
-      Bucket: 'a365-doc-uploader',
+      Bucket: 'fsg-file-uploader',
       Key: `docs/${name}`,
       Body: Buffer.from(base64String.toString(), 'base64'),
       // Body: base64String,
@@ -31,17 +29,15 @@ const s3Store = (name, base64String, contentType) => {
     };
     console.log(params);
     s3.putObject(params, (err, data) => {
-      console.log(data);
       if (err) {
-        console.log(err);
         reject(err);
       } else {
         console.log(
-          `https://a365-doc-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`
+          `https://fsg-file-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`
         );
         resolve({
-          url: `https://a365-doc-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`,
-          ETag: data.ETag.replace(/['"]+/g, '')
+          url: `https://fsg-file-uploader.s3-eu-west-1.amazonaws.com/${params.Key}`,
+          ETag: data.ETag.replace(/['']+/g, '')
         });
       }
     });
@@ -49,15 +45,8 @@ const s3Store = (name, base64String, contentType) => {
 };
 
 const s3Upload = (name, base64String, contentType) => {
-  // const imageData = base64String.split('data:image/png;base64,')[1];
   return s3Store(name, base64String, contentType);
 };
-
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET
-});
 
 app.use(formData.parse());
 
@@ -71,7 +60,6 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/image-upload', async (req, res) => {
-  console.log('===========================');
   const values = Object.values(req.files);
   const uploads = [];
   for (let i = 0; i < values.length; i++) {
@@ -80,51 +68,43 @@ app.post('/image-upload', async (req, res) => {
     const fileName = `${moment().format('DDMMYYYYhhmmsssss')}-${
       values[i].name
     }`;
-    console.log(fileName);
     await s3Upload(fileName.replace(/\s/g, '-'), imageData, values[i].type)
       .then(file => {
+        console.log(file);
         uploads.push({ url: file.url, name: fileName, id: file.ETag });
       })
       .catch(err => res.status(400).json(err));
   }
   console.log(uploads);
   return res.json(uploads);
-  // };
-  // .then(results => res.json(results))
 });
 
-app.post('/delete-image', (req, res) => {
-  // try {
-  //   cloudinary.uploader.destroy(req.body.id).then(results => {
-  //     return res.json(results);
-  //   });
-  //   // console.log(cb);
-  // } catch (err) {
-  //   console.log(err);
-  // }
+app.post('/delete-image', async (req, res) => {
   const params = {
     Bucket: 'docs',
-    Key: req.body.id
+    Key: `docs/${await req.body.id}`
   };
-  console.log(params);
-  s3.deleteObject(params, (err, data) => {
-    if (err) console.log(err);
-    // an error occurred
-    else console.log(data); // successful response
-    /*
-     data = {
-     }
-     */
-  });
+  console.log(`Deleted: ${params}`);
+  try {
+    s3.deleteObject(params, (err, data) => {
+      res.status(200).json(data);
+    });
+  } catch (err) {
+    res.status(400).json('failed to delete');
+  }
 });
 
 app.post('/pushtoproclaim', async (req, res) => {
+  console.log(req.body.data);
   try {
-    pushToProclaim(req.body.caseRef, req.body.caseType, req.body.data).then(
-      results => {
-        return res.json(results);
-      }
-    );
+    pushToProclaim(req.body.caseRef, req.body.caseType, req.body.data);
+    return res.json('sent to proclaim');
+
+    // pushToProclaim(req.body.caseRef, req.body.caseType, req.body.data).then(
+    //   results => {
+    //     return res.json(results);
+    //   }
+    // );
   } catch (err) {
     console.log(err);
   }
@@ -150,7 +130,6 @@ const proclaimHandshake = async (caseRef, vehReg) => {
     });
     if (getCase.cstatus === 'OK') {
       const caseType = getCase.icasetype;
-
       const vehRegTest = await soapClient.proGetData({
         csessionid: login.csessionid,
         ccaseno: caseRef.toUpperCase(),
@@ -275,6 +254,7 @@ const pushToProclaim = async (caseRef, caseType, data) => {
   }
 };
 
-app.listen(process.env.PORT || 8080, () => {
-  console.log(`server running on ${process.env.PORT}`);
+app.listen(process.env.PORT || '8080', 'localhost', async data => {
+  const port = await process.env.PORT;
+  console.log(`server running on ${port}`);
 });

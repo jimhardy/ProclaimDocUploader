@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "max-len": 0,
+    "global-require": 0,
+    "no-nested-ternary": 0,
+    "no-extraneous-dependencies": 0
+  },
+  "parserOptions": {
+    "ecmaVersion": 2018
+  },
+
+  "env": {
+    "es6": true
+  }
+}

@@ -7,7 +7,7 @@ class Image extends Component {
 
   handleChange = async evt => {
     await this.setState({ value: evt.target.value });
-    this.props.handleChange(this.props.image.public_id, this.state.value);
+    this.props.handleChange(this.props.image.id, this.state.value);
   };
 
   render() {
@@ -15,16 +15,17 @@ class Image extends Component {
       <div key={this.props.id}>
         <div className="fadein">
           <div
-            onClick={() => this.props.removeImage(this.props.image.public_id)}
+            onClick={() => this.props.removeImage(this.props.image.name)}
             className="delete"
           >
             <FontAwesomeIcon icon={faTimesCircle} size="2x" />
           </div>
           <img
-            src={this.props.image.secure_url}
+            src={this.props.image.url}
             alt=""
-            onError={() => this.props.onError(this.props.image.public_id)}
-            onClick={() => window.open(this.props.image.secure_url, '_blank')}
+            ket={this.props.image.id}
+            onError={() => this.props.onError(this.props.image.id)}
+            onClick={() => window.open(this.props.image.url, '_blank')}
           />
         </div>
         <textarea

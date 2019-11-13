@@ -72,17 +72,30 @@ export default class App extends Component {
         method: 'POST',
         body: formData
       })
+        // axios
+        //   .request({
+        //     method: 'post',
+        //     url: `${API_URL}/image-upload`,
+        //     data: formData,
+        //     onUploadProgress: p => {
+        //       console.log(p);
+        //       this.setState({
+        //         fileprogress: p.loaded / p.total
+        //       });
+        //     }
+        //   })
         .then(res => {
-          if (!res.ok) {
+          if (res.ok) {
             toast.info(
-              'Please check the images are correct and click Push to Case',
-              { position: toast.POSITION.TOP_CENTER }
+              'Please check the images are correct, add descriptions and click Push to Case',
+              { position: toast.POSITION.TOP_LEFT }
             );
-            throw res;
+            return res.json();
           }
-          return res.json();
+          throw res;
         })
         .then(images => {
+          console.log(images);
           this.setState({
             loading: false,
             images: images.map(image => {
@@ -103,13 +116,36 @@ export default class App extends Component {
   };
 
   removeImage = async id => {
-    axios.post(`${API_URL}/delete-image`, { id }).then(res => {
-      if (res.status === 200) {
-        console.log('deleted');
+    const config = {
+      onUploadProgress: progressEvent => {
+        let percentCompleted = Math.floor(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+        console.log(percentCompleted);
       }
-    });
+    };
+
+    // axios.post(`${API_URL}/delete-image`, { id }, config)
+    axios
+      .request({
+        method: 'post',
+        url: `${API_URL}/delete-image`,
+        data: { id },
+        onUploadProgress: p => {
+          console.log(p);
+          this.setState({
+            fileprogress: p.loaded / p.total
+          });
+        }
+      })
+      .then(res => {
+        if (res.status === 200) {
+          console.log(config.onUploadProgress);
+          console.log(`${id} deleted`);
+        }
+      });
     const updatedArr = await this.state.images.filter(
-      image => image.public_id !== id
+      image => image.name !== id
     );
 
     await this.setState(st => ({
@@ -119,7 +155,7 @@ export default class App extends Component {
 
   addImageDescription = async (id, value) => {
     const updatedArr = await this.state.images.map(image => {
-      if (image.public_id === id) {
+      if (image.id === id) {
         return { ...image, description: value };
       }
       return image;
@@ -141,8 +177,11 @@ export default class App extends Component {
         vehReg: login.vehReg
       })
       .then(res => {
-        console.log(res.data);
-        if (res.data) {
+        if (
+          res.data &&
+          res.data.vehRegTest.cfieldvalue.toUpperCase() ===
+            login.vehReg.toUpperCase()
+        ) {
           this.setState({
             loggedIn: true,
             caseType: res.data.caseType,
@@ -160,21 +199,25 @@ export default class App extends Component {
   uploadToProclaim = async evt => {
     const uploadArr = this.state.images.map(image => {
       return {
-        imageUrl: image.secure_url,
+        id: image.id,
+        imageUrl: image.url,
         description: image.description,
         timestamp: new Date()
       };
     });
-    console.log(uploadArr);
-    await axios
+    axios
       .post(`${API_URL}/pushtoproclaim`, {
         data: uploadArr,
         caseRef: this.state.caseRef,
         caseType: this.state.caseType
       })
-      .then(res => {
-        console.log(res.data);
-      });
+      .then(this.setState({ loading: true }))
+      .then(
+        setTimeout(() => {
+          this.setState({ loading: false, images: [] });
+          console.log('delay end');
+        }, 2000)
+      );
   };
 
   render() {
@@ -189,7 +232,7 @@ export default class App extends Component {
         case images.length > 0:
           return (
             <div>
-              <button className="Form-button" onClick={this.uploadToProclaim}>
+              <button className='Form-button' onClick={this.uploadToProclaim}>
                 Upload all to Proclaim
               </button>
               {this.state.images.map((image, i) => (
@@ -199,7 +242,7 @@ export default class App extends Component {
                   onError={this.onError}
                   handleChange={this.addImageDescription}
                   id={i}
-                  key={image.public_id}
+                  key={image.id}
                   value={image.description}
                 />
               ))}
@@ -211,9 +254,9 @@ export default class App extends Component {
     };
 
     return (
-      <div className="container">
+      <div className='container'>
         <ToastContainer />
-        <div className="button">{content()}</div>
+        <div className='button'>{content()}</div>
       </div>
     );
   }
