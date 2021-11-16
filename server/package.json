@@ -11,7 +11,7 @@
   "author": "Jim Hardy",
   "license": "",
   "dependencies": {
-    "aws-sdk": "^2.509.0",
+    "aws-sdk": "^2.814.0",
     "body-parser": "^1.19.0",
     "cors": "^2.8.4",
     "dotenv": "^6.0.0",
